@@ -218,7 +218,7 @@ internal sealed class DpmExtractor
                 }
             }
 
-            if ((file.FileOffset + file.FileSize) > _streamLength)
+            if ((dataSectionOffset + file.FileOffset + file.FileSize) > _streamLength)
             {
                 return false;
             }
