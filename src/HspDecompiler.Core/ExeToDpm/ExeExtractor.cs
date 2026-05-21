@@ -10,11 +10,12 @@ internal sealed class ExeExtractor
     private const long DpmxOffsetLarge = 0x25000;
     private const long DpmxOffsetSmall = 0x1BE00;
 
-    // DPMX magic bytes: 'D', 'P', 'M', 'X'
-    private const byte DpmxMagicD = 0x44;
-    private const byte DpmxMagicP = 0x50;
-    private const byte DpmxMagicM = 0x4D;
+    // DPMX and DPM2 magic bytes: 'D', 'P', 'M', 'X'/'2'
+    private const byte DpmMagicD = 0x44;
+    private const byte DpmMagicP = 0x50;
+    private const byte DpmMagicM = 0x4D;
     private const byte DpmxMagicX = 0x58;
+    private const byte Dpm2Magic2 = 0x32;
 
     internal static void GetDpmFile(string exeFilePath, string dpmFilePath)
     {
@@ -58,6 +59,15 @@ internal sealed class ExeExtractor
         }
     }
 
+    private static bool IsDpmMagic(byte[] header)
+    {
+        return header.Length >= 4
+               && header[0] == DpmMagicD
+               && header[1] == DpmMagicP
+               && header[2] == DpmMagicM
+               && (header[3] == DpmxMagicX || header[3] == Dpm2Magic2);
+    }
+
     private static long seekDpmStart(Stream exeStream)
     {
         byte[] header = new byte[4];
@@ -65,7 +75,7 @@ internal sealed class ExeExtractor
         {
             exeStream.Seek(DpmxOffsetLarge, SeekOrigin.Begin);
             exeStream.ReadExactly(header, 0, 4);
-            if (header[0] == DpmxMagicD && header[1] == DpmxMagicP && header[2] == DpmxMagicM && header[3] == DpmxMagicX)
+            if (IsDpmMagic(header))
             {
                 return DpmxOffsetLarge;
             }
@@ -75,7 +85,7 @@ internal sealed class ExeExtractor
         {
             exeStream.Seek(DpmxOffsetSmall, SeekOrigin.Begin);
             exeStream.ReadExactly(header, 0, 4);
-            if (header[0] == DpmxMagicD && header[1] == DpmxMagicP && header[2] == DpmxMagicM && header[3] == DpmxMagicX)
+            if (IsDpmMagic(header))
             {
                 return DpmxOffsetSmall;
             }
@@ -92,7 +102,7 @@ internal sealed class ExeExtractor
                 break;
             }
 
-            if (header[0] == DpmxMagicD && header[1] == DpmxMagicP && header[2] == DpmxMagicM && header[3] == DpmxMagicX)
+            if (IsDpmMagic(header))
             {
                 return index;
             }

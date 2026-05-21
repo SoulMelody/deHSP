@@ -7,5 +7,6 @@ public sealed class DpmFileEntry
     public int EncryptionKey { get; set; }
     public int FileOffset { get; set; }
     public int FileSize { get; set; }
+    public int Checksum { get; set; }
     public bool IsEncrypted => EncryptionKey != 0;
 }

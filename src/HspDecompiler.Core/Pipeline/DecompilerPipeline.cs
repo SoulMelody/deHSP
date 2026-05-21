@@ -235,9 +235,15 @@ public sealed class DecompilerPipeline
             }
         }
 
+        Dpm2CryptoTransform? dpm2Crypto = null;
+        if (extractor.IsDpm2 && extractor.CrcSeed != 0)
+        {
+            dpm2Crypto = Dpm2CryptoTransform.FromCrcSeed(extractor.CrcSeed, extractor.Salt);
+        }
+
         foreach (DpmFileEntry file in extractor.FileList)
         {
-            await WriteDpmEntryAsync(reader, extractor, file, outputDir, options, ct).ConfigureAwait(false);
+            await WriteDpmEntryAsync(reader, extractor, file, outputDir, options, dpm2Crypto, ct).ConfigureAwait(false);
         }
 
         _logger.Write(Strings.ExtractionComplete);
@@ -250,6 +256,7 @@ public sealed class DecompilerPipeline
         DpmFileEntry file,
         string outputDir,
         DecompilerOptions options,
+        Dpm2CryptoTransform? dpm2Crypto,
         CancellationToken ct)
     {
         if (file.IsEncrypted && !options.AllowDecryption)
@@ -273,6 +280,11 @@ public sealed class DecompilerPipeline
 
         byte[] fileData = reader.ReadBytes(file.FileSize);
 
+        if (dpm2Crypto != null && file.Checksum != 0)
+        {
+            fileData = dpm2Crypto.Decrypt(fileData, file.Checksum);
+        }
+
         if (file.IsEncrypted)
         {
             await CrackDpmEncryptionAsync(fileData, file, outputDir, outputPath, ct).ConfigureAwait(false);
@@ -281,6 +293,11 @@ public sealed class DecompilerPipeline
         {
             try
             {
+                string? dir = Path.GetDirectoryName(outputPath);
+                if (dir != null && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
                 using var saveStream = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write);
                 saveStream.Write(fileData, 0, fileData.Length);
             }
